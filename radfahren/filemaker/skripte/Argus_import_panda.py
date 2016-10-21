@@ -13,10 +13,13 @@ import re
 # Documentation for df.replace
 # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.df.replace.html
 ''' ToDo: Kinder aufsplitten auf mehrere Reihen -> Problem mit umlauten ! --> done
-          Anschlußmitglieder, einzieher betrag aufsplitten ( + kein DE )
+          Anschlußmitglieder, 
+                     einzieher betrag aufsplitten 
+                     kein DE --> done
           Mitgliedskategorien --> done
           Beitrittsdatum --> done
           SEPA  --> done
+          Export für Serienbrief
 '''
 
 kinder = {}
