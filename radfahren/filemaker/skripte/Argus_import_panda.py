@@ -13,26 +13,23 @@ import re
 # Documentation for df.replace
 # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.df.replace.html
 ''' ToDo: Kinder aufsplitten auf mehrere Reihen -> Problem mit umlauten ! --> done
-          Anschlußmitglieder, 
-                     einzieher betrag aufsplitten 
-                     kein DE --> done
+          Anschlußmitglieder, einzieher betrag aufsplitten ( + kein DE )
           Mitgliedskategorien --> done
           Beitrittsdatum --> done
           SEPA  --> done
-          Export für Serienbrief
 '''
 
 kinder = {}
 header = []
-headerfile = open('c:/Users/ch/radfahren/filemaker/input/radlobby_header.txt', 'rb')
+headerfile = open('/home/ch/Dokumente/filemaker/input/radlobby_header.txt', 'rb')
 header = headerfile.readline().split(',')
 headerfile.close()
 """set skiprow to remove first three lines,
 set header to zero to use own header through names
 set dtype to str for telefonnumbers"""
 
-infile = 'c:/Users/ch/radfahren/filemaker/input/mitglied_in_ihrem_bundesland_werden.csv'
-outfile = 'c:/Users/ch/radfahren/filemaker/output/Argusimport'
+infile = '/home/ch/Dokumente/filemaker/input/mitglied_in_ihrem_bundesland_werden.csv'
+outfile = '/home/ch/Dokumente/filemaker/output/Argusimport'
 
 df = pd.read_csv(infile,
                  sep=';',
@@ -40,8 +37,11 @@ df = pd.read_csv(infile,
                  index_col=False,
                  dtype={'mobil': str},
                  encoding='utf-8')
-# format mobil number, split into predial and number
-# and add new column for predial
+# set new index to achieve that Anschlussmtg are right next to 
+# the Hauptmtg
+new_index = [x*10 for x in df.index.get_values()]                 
+df['new_index'] = new_index
+df = df.set_index('new_index')            
 
 # Anschlußmitglieder
 for row in df.index:
@@ -49,21 +49,22 @@ for row in df.index:
     VN = ''
     gebdatum = ''
     email = ''
+    series = pd.Series()
     anschluss = df.Notizen.ix[row]
     if pd.notnull(anschluss):
-        series_index = df.shape[0] + 1
         series = df.ix[row]     # copy row of Hauptmitglied
+        series_index = int(series.name) + 1          
         series = series.rename(index=series_index)
         series = series.drop(['kinder_bis', 'kinder_bis_19'])
         series.ix['Mitgliedskategorien'] = 2
-        series.ix['keinDE'] = 1
+        series.ix['keinDE'] = '1'   # value has to be of type string
         data = re.split(',|;', anschluss)
         series['Hauptmitglied'] = series.ix['VN'] + ' ' + series.ix['NAME']
         gesamtname = re.search(ur'[A-Za-zäüöß\-]+\s[A-Za-zäüöß\-]+', anschluss)
         VN = gesamtname.group(0).split(' ')[0]
         NAME = gesamtname.group(0).split(' ')[1]
-        gebdatum = re.search('[\d+\.]+|\d+', anschluss)
-        email = re.search('\w+\@[\w.]+', anschluss)
+        gebdatum = re.search(r'[\d+\.]+|\d+', anschluss)
+        email = re.search(r'\w+\@[\w.]+', anschluss)
         if NAME:
             series.loc['NAME'] = NAME
         if VN:
@@ -74,11 +75,12 @@ for row in df.index:
             series.loc['EMAIL'] = email.group(0)
         df = df.append(series)
 
+df = df.sort_index()
 
 mobil = df.mobil.tolist()
 row_vorwahl = []
 row_nummer = []
-pattern = ['\s+', '^0043', '^\+43', '^43', '^0', '[^\d]']
+pattern = [r'\s+', r'^0043', r'^\+43', r'^43', r'^0', r'[^\d]']
 for phonenumber in mobil:
     if pd.isnull(phonenumber):            # checking for value nan
         row_vorwahl.append(phonenumber)
@@ -123,7 +125,7 @@ for index in sorted(kinder.keys()):
         m = re.search(ur'[A-Za-züöäß\s-]+', kind)
         if m:
             name = m.group(0)
-        date = re.findall('\d+\.\d+\.\d+|\d+', kind)
+        date = re.findall(r'\d+\.\d+\.\d+|\d+', kind)
         # print index, '\t', kind
         if name:
             df.ix[index, kinderspalte] = name
@@ -138,13 +140,13 @@ for index in sorted(kinder.keys()):
 #        children.append(None)
 
 # Add SNR Number for testing
-# df['SNR'] = range(50000, 50000+int(len(df.index)))
+df['SNR'] = range(50000, 50000+int(len(df.index)))
 # set Anrede to (Herr, Frau, Firma, sonstiges)
 df.replace(u'männlich', u'Herr', inplace=True)
 df.replace(u'weiblich', u'Frau', inplace=True)
 
 # Beitritt Datum, Herkunft
-df.Beitritt.replace('\s-\s\d+:\d+', '', regex=True, inplace=True)
+df.Beitritt.replace(r'\s-\s\d+:\d+', '', regex=True, inplace=True)
 df['Herkunft'] = 'radlobby.at'
 
 # Set entries to Mitglied and Mitgliedkategorie normal
@@ -172,7 +174,9 @@ df.Notizen = df.Notizen + ";" + df.summe.map(str)
 # Writing to csv file, for import to filemaker 5 it has to be named .mer and
 # use ";" as seperator
 timestamp = datetime.strftime(datetime.now(), '%Y%m%d_%H_%M')
-df.to_csv(outfile + '_' + timestamp + '.mer',
+
+try: 
+    df.to_csv(outfile + '_' + timestamp + '.mer',
        sep=";",
        index=False,
        encoding='windows-1252',
@@ -183,3 +187,5 @@ df.to_csv(outfile + '_' + timestamp + '.mer',
                 'kind3_dat', 'kind4', 'kind4_dat', 'kind5', 'kind5_dat',
                 'moremembers', 'summe', 'einzbeitrag2015', 'EinzNotizen', 'Beitritt', 
                 'Herkunft', 'Notizen', 'keinDE'])
+except IOError:
+    print 'ERROR: Could not write to output file'
