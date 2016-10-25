@@ -6,30 +6,32 @@ Created on Sat Sep 24 22:57:21 2016
 """
 
 # import math
-# import numpy as np
+from numpy import nan
 import pandas as pd
 from datetime import datetime
 import re
+import locale
+locale.setlocale(locale.LC_TIME, "deu_deu")
 # Documentation for df.replace
 # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.df.replace.html
 ''' ToDo: Kinder aufsplitten auf mehrere Reihen -> Problem mit umlauten ! --> done
           Anschlußmitglieder, einzieher betrag aufsplitten ( + kein DE )
           Mitgliedskategorien --> done
           Beitrittsdatum --> done
-          SEPA  --> done
-'''
+          SEPA  --> done '''
 
 kinder = {}
 header = []
-headerfile = open('/home/ch/Dokumente/filemaker/input/radlobby_header.txt', 'rb')
+headerfile = open('C:/Users/ch/radfahren/filemaker/input/radlobby_header.txt', 'rb')
 header = headerfile.readline().split(',')
 headerfile.close()
+
 """set skiprow to remove first three lines,
 set header to zero to use own header through names
 set dtype to str for telefonnumbers"""
 
-infile = '/home/ch/Dokumente/filemaker/input/mitglied_in_ihrem_bundesland_werden.csv'
-outfile = '/home/ch/Dokumente/filemaker/output/Argusimport'
+infile = 'C:/Users/ch/radfahren/filemaker/input/mitglied_in_ihrem_bundesland_werden.csv'
+outfile = 'C:/Users/ch/radfahren/filemaker/output/db-import'
 
 df = pd.read_csv(infile,
                  sep=';',
@@ -37,11 +39,11 @@ df = pd.read_csv(infile,
                  index_col=False,
                  dtype={'mobil': str},
                  encoding='utf-8')
-# set new index to achieve that Anschlussmtg are right next to 
+# set new index to achieve that Anschlussmtg are right next to
 # the Hauptmtg
-new_index = [x*10 for x in df.index.get_values()]                 
+new_index = [x*10 for x in df.index.get_values()]
 df['new_index'] = new_index
-df = df.set_index('new_index')            
+df = df.set_index('new_index')
 
 # Anschlußmitglieder
 for row in df.index:
@@ -53,7 +55,7 @@ for row in df.index:
     anschluss = df.Notizen.ix[row]
     if pd.notnull(anschluss):
         series = df.ix[row]     # copy row of Hauptmitglied
-        series_index = int(series.name) + 1          
+        series_index = int(series.name) + 1
         series = series.rename(index=series_index)
         series = series.drop(['kinder_bis', 'kinder_bis_19'])
         series.ix['Mitgliedskategorien'] = 2
@@ -70,7 +72,7 @@ for row in df.index:
         if VN:
             series.loc['VN'] = VN
         if gebdatum:
-            series.loc['Gebdatum'] = gebdatum.group(0)
+            series.loc['GEBDATUM'] = gebdatum.group(0)
         if email:
             series.loc['EMAIL'] = email.group(0)
         df = df.append(series)
@@ -97,8 +99,8 @@ df['mobil'] = row_nummer
 df.insert(18, 'vorwahltelmobil', row_vorwahl)
 
 # Capitalize first letter of VN and NAME
-# df.VN = df.VN.str.title()
-# df.NAME = df.NAME.str.title()
+df.VN = df.VN.str.title()
+df.NAME = df.NAME.str.title()
 
 # add columns for up to seven children + birthday
 for i in range(1, 8):
@@ -165,17 +167,19 @@ df.Mitgliedskategorien.replace('Fördermitglied', 5, inplace=True)
 df['einzieher_check'].replace('X', 'einzieher', inplace=True)
 
 for index, einzieher in zip(df.einzieher_check.index, df.einzieher_check):
-    if (einzieher == 'einzieher'):
+    if einzieher == 'einzieher':
         df.ix[index, 'EinzNotizen'] = datetime.strftime(datetime.now(), '%B')
         if df.anschlussmembers.ix[index] < 1:
             df.ix[index, 'einzbeitrag2015'] = str(df.ix[index, 'summe']).replace('.', ',')
 
-df.Notizen = df.Notizen + ";" + df.summe.map(str)
+# convert Nan in Notizen to empty string '' to allow concatenation
+df.Notizen.replace(nan, '', inplace=True)
+df.Notizen = df.Notizen + ";" + df.summe.map(str) + ';' + df.zahlungsart
 # Writing to csv file, for import to filemaker 5 it has to be named .mer and
 # use ";" as seperator
 timestamp = datetime.strftime(datetime.now(), '%Y%m%d_%H_%M')
 
-try: 
+try:
     df.to_csv(outfile + '_' + timestamp + '.mer',
        sep=";",
        index=False,
