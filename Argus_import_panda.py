@@ -44,8 +44,8 @@ df = pd.read_csv(infile,
 new_index = [x*10 for x in df.index.get_values()]
 df['new_index'] = new_index
 df = df.set_index('new_index')
-
-# Anschlußmitglieder
+df['ANSZU'] = nan
+################ Anschlußmitglieder
 for row in df.index:
     Name = ''
     VN = ''
@@ -59,7 +59,8 @@ for row in df.index:
         series = series.rename(index=series_index)
         series = series.drop(['kinder_bis', 'kinder_bis_19'])
         series.ix['Mitgliedskategorien'] = 2
-        series.ix['keinDE'] = '1'   # value has to be of type string
+        series.ix['keinDE'] = '1'   # value has to be of type string  
+        series.ix['ANSZU'] = 1  # mark as Anschlußmitglied 
         data = re.split(',|;', anschluss)
         series['Hauptmitglied'] = series.ix['VN'] + ' ' + series.ix['NAME']
         gesamtname = re.search(ur'[A-Za-zäüöß\-]+\s[A-Za-zäüöß\-]+', anschluss)
@@ -102,7 +103,7 @@ df.insert(18, 'vorwahltelmobil', row_vorwahl)
 df.VN = df.VN.str.title()
 df.NAME = df.NAME.str.title()
 
-# add columns for up to seven children + birthday
+########## children + birthday, add columns for up to seven
 for i in range(1, 8):
     kind = 'kind' + str(i)
     kind_dat = 'kind' + str(i) + '_dat'
@@ -141,8 +142,16 @@ for index in sorted(kinder.keys()):
 #    else:
 #        children.append(None)
 
-# Add SNR Number for testing
+# Add SNR Number automatically
 df['SNR'] = range(50000, 50000+int(len(df.index)))
+# add Hauptmitglied SNR to Anschlußmitglied
+for row in df.index:
+    if pd.notnull(df.ix[row, 'ANSZU']):
+        df.ix[row, 'ANSZU'] = df.ix[row, 'SNR'] - 1
+
+df['ANSZU'] = df['ANSZU'].map('{:.0f}'.format)
+df['ANSZU'].replace('nan', '', inplace=True)
+
 # set Anrede to (Herr, Frau, Firma, sonstiges)
 df.replace(u'männlich', u'Herr', inplace=True)
 df.replace(u'weiblich', u'Frau', inplace=True)
@@ -157,11 +166,11 @@ df['Herkunft'] = 'radlobby.at'
 # 6 = Gratis-Mitgliedschaft, 7= Sozialtarif
 df['Mitglied'] = 1
 
-df.Mitgliedskategorien.replace('Vollmitglied', 1, inplace=True)
-df.Mitgliedskategorien.replace('Haushaltsmitglied', 2, inplace=True)
-df.Mitgliedskategorien.replace('StudentIn (bis 26 Jahre)', 3, inplace=True)
-df.Mitgliedskategorien.replace('Junior (bis 18 Jahre)', 4, inplace=True)
-df.Mitgliedskategorien.replace('Fördermitglied', 5, inplace=True)
+df.Mitgliedskategorien.replace(u'Vollmitglied', 1, inplace=True)
+df.Mitgliedskategorien.replace(u'Haushaltsmitglied', 2, inplace=True)
+df.Mitgliedskategorien.replace(u'StudentIn (bis 26 Jahre)', 3, inplace=True)
+df.Mitgliedskategorien.replace(u'Junior (bis 18 Jahre)', 4, inplace=True)
+df.Mitgliedskategorien.replace(u'Fördermitglied', 5, inplace=True)
 
 # SEPA
 df['einzieher_check'].replace('X', 'einzieher', inplace=True)
@@ -190,6 +199,6 @@ try:
                 'kind1', 'kind1_dat', 'kind2', 'kind2_dat', 'kind3',
                 'kind3_dat', 'kind4', 'kind4_dat', 'kind5', 'kind5_dat',
                 'moremembers', 'summe', 'einzbeitrag2015', 'EinzNotizen', 'Beitritt', 
-                'Herkunft', 'Notizen', 'keinDE'])
+                'Herkunft', 'Notizen', 'keinDE', 'ANSZU'])
 except IOError:
     print 'ERROR: Could not write to output file'
