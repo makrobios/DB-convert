@@ -7,6 +7,7 @@ Created on Fri Nov 04 22:34:00 2016
 
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox
 import tkFileDialog
 from numpy import nan
 import pandas as pd
@@ -23,10 +24,15 @@ locale.setlocale(locale.LC_TIME, "deu_deu")
           Beitrittsdatum --> done
           SEPA  --> done '''
 
-def run_db_conversion(inputfile):
-    print "starting conversion.....\n"
+def run_db_conversion(inputfile, SNR):
+    if SNR is '':
+        SNR = 0
+    else:
+        SNR = int(SNR)
     kinder = {}
     header=['webform_serial','webform_sid','webform_time','Beitritt','webform_modified_time','webform_draft','webform_ip_address','webform_uid','SNR','VN','NAME','Mitgliedskategorien','aktionscode','freiwilliger_beitrag','vorname_v','nachname_v','STRASSE','PLZ','ORT','mobil','EMAIL','GEBDATUM','Anrede','kinder_bis','kinder_bis_19','anschlussmembers','Notizen','zahlungsart','iban15','bic15','einzieher_check','summe','bezahlstatus','orderid','Herkunft,EinzNotizen']
+    timestamp = datetime.strftime(datetime.now(), '%Y%m%d_%H_%M')
+    outputfile= inputfile + '_' + timestamp + '.mer'
     df = pd.read_csv(inputfile,
                      sep=';',
                      skiprows=3,
@@ -137,7 +143,7 @@ def run_db_conversion(inputfile):
     #    else:
     #        children.append(None)
     # Add SNR Number automatically
-    df['SNR'] = range(50000, 50000+int(len(df.index)))
+    df['SNR'] = range(SNR, SNR+int(len(df.index)))
     # add Hauptmitglied SNR to Anschlußmitglied
     for row in df.index:
         if pd.notnull(df.ix[row, 'ANSZU']):
@@ -172,9 +178,9 @@ def run_db_conversion(inputfile):
     df.Notizen = df.Notizen + ";" + df.summe.map(str) + ';' + df.zahlungsart
     # Writing to csv file, for import to filemaker 5 it has to be named .mer and
     # use ";" as seperator
-    timestamp = datetime.strftime(datetime.now(), '%Y%m%d_%H_%M')
+    
     try:
-        df.to_csv(inputfile + '_' + timestamp + '.mer',
+        df.to_csv(outputfile,
            sep=";",
            index=False,
            encoding='windows-1252',
@@ -185,25 +191,56 @@ def run_db_conversion(inputfile):
                     'moremembers', 'summe', 'einzbeitrag2015', 'EinzNotizen',         'Beitritt', 'Herkunft', 'Notizen', 'keinDE', 'ANSZU'])
     except IOError:
         print 'ERROR: Could not write to output file'
-    print "Conversion finished!"
-
+    messagebox.showinfo(u'Radlobby-zu-Kartei','Konvertierung beendet!\n'+
+                        u'Die Ausgabedatei ist\n' + unicode(outputfile))
+    
+###############################################################################
 
 '''Setup graphical User Interface with inputfile and a start button
-TODO=> Start Button should only be clickable after inputfile was chosen
-    => Progress Bar or Start Finish messages
+TODO    => Progress Bar or Start Finish messages
 '''
 root = Tk()
 input_file = StringVar()
-
+SNR = StringVar()
+def filepath(input_file):
+    input_file.set(tkFileDialog.askopenfilename(initialdir='%HOMEPATH%\Downloads', filetypes=[('CSV', '.csv'),('All Files','.*')]))
+    if type(input_file.get()) is unicode:
+        b_run.state(['!disabled'])
 
 root.title("Radlobby Import")
+root.geometry('500x300')
+f = ttk.Frame(root, padding=(5,10),width=500, height=100)
+f['borderwidth'] = 5
+f['relief'] = 'raised'
 
-mainframe = ttk.Frame(root)
-mainframe.grid()
+#secondframe = ttk.Frame(root,relief="sunken")
+#secondframe.grid(column=5,row=0)
+#testbutton = ttk.Button(secondframe, text='test button').grid(column=6, row=0,sticky=E)
 
-e_in = Entry(mainframe, textvariable=input_file)
-b_in = ttk.Button(mainframe, text="input file", command=lambda: input_file.set(tkFileDialog.askopenfilename()))
-b_run = ttk.Button(mainframe,text = "Start Script", command = lambda: run_db_conversion(input_file.get())).grid(column=5, row=5, sticky=E)
-b_in.grid_configure()
-e_in.grid_configure()
+e_in = ttk.Entry(f, textvariable=input_file, width=40)
+e_snr = ttk.Entry(f, textvariable=SNR, width=20)
+b_in = ttk.Button(f, text="CSV Datei \n auswählen", command=lambda: filepath(input_file))
+b_run = ttk.Button(f, text="Start Script", command=lambda: run_db_conversion( input_file.get(),SNR.get() ))
+l_snr = ttk.Label(f, text='SNR Nummer')
+
+root.columnconfigure(0, weight=1)
+root.rowconfigure(0,weight=1)
+f.grid(column=0,row=0, sticky=(N, W, E, S))
+f.columnconfigure(0, weight=1)
+f.columnconfigure(1, weight=1)
+
+f.rowconfigure(3,weight=1)
+f.rowconfigure(0, weight=1)
+
+
+b_in.grid_configure(column=0, row=0, sticky=N)
+e_in.grid_configure(column=0, row = 2, sticky = W)
+l_snr.grid(column=0, row=4)
+e_snr.grid(column = 0, row = 5)
+
+b_run.grid(column=3, row=7, sticky=E)
+
+
+b_run.state(['disabled'])
+
 root.mainloop()
