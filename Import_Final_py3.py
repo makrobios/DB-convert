@@ -5,6 +5,7 @@ Created on Fri Nov 04 22:34:00 2016
 @author: ch
 """
 
+import os
 import re
 from datetime import datetime
 import locale
@@ -13,6 +14,29 @@ from numpy import nan
 from tkinter import Tk, ttk, messagebox, StringVar
 from tkinter import filedialog as fdial
 
+
+de_df = pd.DataFrame()
+
+def drahtesel_reformat():
+    header = ['SNR','Date Submitted','Titel','VN','NAME',
+    'STRASSE','PLZ','ORT','mobil','email','Anrede','Gebdatum',
+    'Herkunft','Notizen','Sonstiges','Mitglied', 'Nichtmigliedskategorien','NummerProbeabo']
+
+    
+    for root,dirs,files in os.walk("C:/Users/ch/db-convert/drahtesel/"):
+        df = pd.DataFrame()
+        for file in files:
+            file = os.path.join(root, file)
+            series = pd.read_csv(file, sep=',',
+                             skiprows = 1,
+                             header = None, 
+                             names = header,
+                             index_col = False)
+            df = df.append(series)
+    
+    return df
+
+de_df = drahtesel_reformat()
 
 
 locale.setlocale(locale.LC_TIME, "deu_deu")
@@ -220,38 +244,51 @@ def filepath(file):
     if isinstance(file.get(), str):
         b_run.state(['!disabled'])
 
-root.title("Radlobby Import")
-root.geometry('500x300')
-f = ttk.Frame(root, padding=(5, 10), width=500, height=100)
+root.title("Reformatierung für Kartei Import")
+root.geometry('300x400')
+f = ttk.Frame(root, padding=(5, 10), width=300, height=100)
 f['borderwidth'] = 5
 f['relief'] = 'raised'
 
 e_in = ttk.Entry(f, textvariable=input_file, width=40)
-e_snr = ttk.Entry(f, textvariable=SNR, width=20)
-b_in = ttk.Button(f, text="CSV Datei \n auswählen",
+e_snr = ttk.Entry(f, textvariable=SNR, width=10)
+b_in = ttk.Button(f, text="Radlobby CSV wählen",
                   command=lambda: filepath(input_file))
 b_run = ttk.Button(f, text="Start Script",
                command=lambda: run_db_conversion(input_file.get(), SNR.get()))
-l_snr = ttk.Label(f, text='SNR Nummer')
+l_snr = ttk.Label(f, text='erste SNR')
 # root.columnconfigure and .rowconfigure are important for resizing !
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
 f.grid(column=0, row=0, sticky=("N, W, E, S"))
 f.columnconfigure(0, weight=1)
 f.columnconfigure(1, weight=1)
-
 f.rowconfigure(3, weight=1)
 f.rowconfigure(0, weight=1)
-
-
+### Radlobby grid layout 
 b_in.grid_configure(column=0, row=0, sticky="N")
-e_in.grid_configure(column=0, row=2, sticky="W")
-l_snr.grid(column=0, row=4)
-e_snr.grid(column=0, row=5)
+e_in.grid_configure(column=0, row=1, sticky="N")
+l_snr.grid(column=0, row=2)
+e_snr.grid(column=0, row=3)
 
-b_run.grid(column=3, row=7, sticky="E")
-
-
+b_run.grid(column=0, row=5, sticky="EW")
 b_run.state(['disabled'])
 
+### Drahtesel part of window
+de_input_file = StringVar()
+
+de_f = ttk.Frame(root,padding=(5, 10),width=300, height=100).grid()
+de_b_in = ttk.Button(de_f, text = "Drahtesel CSV wählen",
+                     command=lambda: filepath(de_input_file))
+de_e_in = ttk.Entry(de_f, textvariable=de_input_file, width=40)
+de_l_snr = ttk.Label(de_f, text='erste SNR')
+de_e_snr = ttk.Entry(de_f, textvariable=SNR, width=10)
+b_run = ttk.Button(de_f, text="Start Script",
+               command=lambda: drahtesel_reformat(input_file.get(), SNR.get()))
+### Drahtesel grid layout
+de_b_in.grid_configure(column=0, row=6, sticky="N")
+de_e_in.grid_configure(column=0, row = 7, sticky = "N")
+de_l_snr.grid(column=0, row=9)
+de_e_snr.grid(column=0, row=10)
+b_run.grid(column=0, row = 11, sticky = "EW")
 root.mainloop()
