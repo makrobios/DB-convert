@@ -10,8 +10,7 @@ from datetime import datetime
 import locale
 import pandas as pd
 from numpy import nan
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import Tk, ttk, messagebox, StringVar
 from tkinter import filedialog as fdial
 
 
@@ -70,6 +69,7 @@ def run_db_conversion(file, mtgNo):
             series.ix['Mitgliedskategorien'] = 2
             series.ix['keinDE'] = '1'   # value has to be of type string
             series.ix['ANSZU'] = 1  # mark as Anschlußmitglied
+            series.ix['Anrede'] = ''
           #  data = re.split(', |;',  anschluss)
             series['Hauptmitglied'] = series.ix['VN'] + ' ' + series.ix['NAME']
             gesamtname = re.search(r'[A-Za-zäüöß\-]+\s[A-Za-zäüöß\-]+', anschluss)
