@@ -4,7 +4,7 @@ Created on Fri Nov 04 22:34:00 2016
 
 @author: ch
 """
-
+import glob
 import os
 import re
 from datetime import datetime
@@ -14,32 +14,62 @@ from numpy import nan
 from tkinter import Tk, ttk, messagebox, StringVar
 from tkinter import filedialog as fdial
 
+locale.setlocale(locale.LC_TIME, "deu_deu")
 
+root = Tk()
+input_file = StringVar()
+SNR = StringVar()
 de_df = pd.DataFrame()
+de_input_file = StringVar()
+de_SNR = StringVar()
+de_outputfile = 'output.mer'
 
-def drahtesel_reformat():
+
+def de_filepath(file):
+    file.set(fdial.askdirectory(initialdir=r'%HOMEPATH%\Downloads'))
+    if isinstance(file.get(), str):
+        de_b_run.state(['!disabled'])
+
+def filepath(file):
+    file.set(fdial.askopenfilename(initialdir=r'%HOMEPATH%\Downloads',
+                                   filetypes=[('CSV', '.csv'), ('All Files', '.*')]))
+    if isinstance(file.get(), str):
+        b_run.state(['!disabled'])
+        
+def drahtesel_reformat(folder, snr):
+    snr = int(snr)
     header = ['SNR','Date Submitted','Titel','VN','NAME',
     'STRASSE','PLZ','ORT','mobil','email','Anrede','Gebdatum',
     'Herkunft','Notizen','Sonstiges','Mitglied', 'Nichtmigliedskategorien','NummerProbeabo']
+    df = pd.DataFrame()
+    os.chdir(folder)
+    for filename in glob.glob('ninja-forms-submission*'):
+        print(filename)
+        series = pd.read_csv(filename, sep=',',
+                         skiprows = 1,
+                         header = None, 
+                         names = header,
+                         index_col = False)
+        series['SNR'] = snr
+        series['Mitglied'] = 0
+        series['Nichtmitglied'] = 1
+        series['NummerProbeabo'] = '3/16'
+		series['Nichtmigliedskategorien'] = 7
+        df = df.append(series)
+        snr = snr + 1 
+   
+    try:
+        df.to_csv(de_outputfile,
+                  sep=";",
+                  index=False,
+                  encoding='windows-1252')
+    except IOError:
+        print('ERROR: Could not write to output file')
+#    return df
+    messagebox.showinfo('Drahtesel Mitlgieder Konvertierung', 'Drahtesel Konvertierung beendet!\n'+
+                         'Die Ausgabedatei ist\n' + de_outputfile)
 
-    
-    for root,dirs,files in os.walk("C:/Users/ch/db-convert/drahtesel/"):
-        df = pd.DataFrame()
-        for file in files:
-            file = os.path.join(root, file)
-            series = pd.read_csv(file, sep=',',
-                             skiprows = 1,
-                             header = None, 
-                             names = header,
-                             index_col = False)
-            df = df.append(series)
-    
-    return df
 
-de_df = drahtesel_reformat()
-
-
-locale.setlocale(locale.LC_TIME, "deu_deu")
 
 # Documentation for df.replace
 # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.df.replace.html
@@ -92,7 +122,7 @@ def run_db_conversion(file, mtgNo):
             series = series.drop(['kinder_bis', 'kinder_bis_19'])
             series.ix['Mitgliedskategorien'] = 2
             series.ix['keinDE'] = '1'   # value has to be of type string
-            series.ix['ANSZU'] = 1  # mark as Anschlußmitglied
+            series.ix['ANSZU'] = 1  # mark as AnschluÃmitglied
             series.ix['Anrede'] = ''
           #  data = re.split(', |;',  anschluss)
             series['Hauptmitglied'] = series.ix['VN'] + ' ' + series.ix['NAME']
@@ -152,7 +182,7 @@ def run_db_conversion(file, mtgNo):
             entry = re.sub(r'\r\n|\r|\n', ';', entry)
             kinder[index] = entry.split(';')
 
-    for index in sorted(kinder.keys()):
+    for index in sorted(kinder):
         i = 0
         for kind in filter(lambda x: x != '', kinder[index]):
             i = i + 1
@@ -175,7 +205,7 @@ def run_db_conversion(file, mtgNo):
     #        children.append(None)
     # Add SNR Number automatically
     df['SNR'] = range(mtgNo, mtgNo+int(len(df.index)))
-    # add Hauptmitglied SNR to Anschlußmitglied
+    # add Hauptmitglied SNR to AnschluÃmitglied
     for row in df.index:
         if pd.notnull(df.ix[row, 'ANSZU']):
             df.ix[row, 'ANSZU'] = df.ix[row, 'SNR'] - 1
@@ -232,17 +262,10 @@ def run_db_conversion(file, mtgNo):
 ###############################################################################
 
 '''Setup graphical User Interface with inputfile and a start button
- Zu Tun: => Progress Bar or Start Finish messages
 '''
 ### GUI with tkinter
-root = Tk()
-input_file = StringVar()
-SNR = StringVar()
-def filepath(file):
-    file.set(fdial.askopenfilename(initialdir=r'%HOMEPATH%\Downloads',
-                                   filetypes=[('CSV', '.csv'), ('All Files', '.*')]))
-    if isinstance(file.get(), str):
-        b_run.state(['!disabled'])
+
+
 
 root.title("Reformatierung für Kartei Import")
 root.geometry('300x400')
@@ -275,20 +298,20 @@ b_run.grid(column=0, row=5, sticky="EW")
 b_run.state(['disabled'])
 
 ### Drahtesel part of window
-de_input_file = StringVar()
 
 de_f = ttk.Frame(root,padding=(5, 10),width=300, height=100).grid()
-de_b_in = ttk.Button(de_f, text = "Drahtesel CSV wählen",
-                     command=lambda: filepath(de_input_file))
+de_b_in = ttk.Button(de_f, text = "Drahtesel Ordner auswählen",
+                     command=lambda: de_filepath(de_input_file))
 de_e_in = ttk.Entry(de_f, textvariable=de_input_file, width=40)
 de_l_snr = ttk.Label(de_f, text='erste SNR')
-de_e_snr = ttk.Entry(de_f, textvariable=SNR, width=10)
-b_run = ttk.Button(de_f, text="Start Script",
-               command=lambda: drahtesel_reformat(input_file.get(), SNR.get()))
+de_e_snr = ttk.Entry(de_f, textvariable=de_SNR, width=10)
+de_b_run = ttk.Button(de_f, text="Start Drahtesel",
+               command=lambda: drahtesel_reformat(de_input_file.get(), de_SNR.get()))
 ### Drahtesel grid layout
 de_b_in.grid_configure(column=0, row=6, sticky="N")
 de_e_in.grid_configure(column=0, row = 7, sticky = "N")
 de_l_snr.grid(column=0, row=9)
 de_e_snr.grid(column=0, row=10)
-b_run.grid(column=0, row = 11, sticky = "EW")
+de_b_run.grid(column=0, row = 11, sticky = "EW")
+
 root.mainloop()
