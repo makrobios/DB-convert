@@ -4,19 +4,6 @@ Created on Fri Nov 04 22:34:00 2016
 
 @author: ch
 """
-
-
-
-''' => TODO: 
--- Bei Anschlußmitglied SNR von Hauptmitglied eintragen: Ansatz zb.:
-df[(df.webform_serial == 546) & (df.Mitgliedskategorien == 'Vollmitglied')].SNR => 
-webform_serial ist bei Anschluß und Hauptmitglied gleich.
--- Bei Anschlußmitgliedern Betrag aufsplitten zwischen Haupt und Anschlußmitglied
-'''
-
-
-
-
 import glob
 import os
 import re
@@ -27,7 +14,7 @@ from numpy import nan
 from tkinter import Tk, ttk, messagebox, StringVar
 from tkinter import filedialog as fdial
 
-locale.setlocale(locale.LC_TIME, "de_AT.utf8")
+locale.setlocale(locale.LC_TIME, "deu_deu")
 
 root = Tk()
 input_file = StringVar()
@@ -67,7 +54,7 @@ def drahtesel_reformat(folder, snr):
         series['Mitglied'] = 0
         series['Nichtmitglied'] = 1
         series['NummerProbeabo'] = '3/16'
-        series['Nichtmigliedskategorien'] = 7
+		series['Nichtmigliedskategorien'] = 7
         df = df.append(series)
         snr = snr + 1 
    
@@ -122,6 +109,10 @@ def run_db_conversion(file, mtgNo):
     df['ANSZU'] = nan
 ### Anschlußmitglieder
     for row in df.index:
+       # Name = ''
+        #VN = ''
+        #gebdatum = ''
+        #email = ''
         series = pd.Series()
         anschluss = df.Notizen.ix[row]
         if pd.notnull(anschluss):
