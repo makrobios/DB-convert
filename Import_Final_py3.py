@@ -37,6 +37,9 @@ def filepath(file):
         b_run.state(['!disabled'])
         
 def drahtesel_reformat(folder, snr):
+    #probeabo = ["#","Date Submitted","Titel","Vorname","Nachname","Addresse","Postleitzahl","Ort","Telefonnummer","E-Mail","Geschlecht","Geburtsdatum","Wie sind Sie auf den Drahtesel aufmerksam geworden?","Veranstaltung","sonstiges"]
+    #geschenkabo = ["#","Date Submitted","Titel","Vorname","Nachname","Addresse","Postleitzahl","Ort","Telefon","E-Mail","Titel","Vorname","Nachname","Adresse","Postleitzahl","Ort","Email","Abo","Zahlung","Willkommenspaket","Anmerkungen"]
+    #jahresabo = ["#","Date Submitted","Titel","Vorname","Nachname","Addresse","Postleitzahl","Ort","Telefon","E-Mail","Abo","Zahlung"]
     snr = int(snr)
     header = ['SNR','Date Submitted','Titel','VN','NAME',
     'STRASSE','PLZ','ORT','mobil','email','Anrede','Gebdatum',
@@ -54,7 +57,7 @@ def drahtesel_reformat(folder, snr):
         series['Mitglied'] = 0
         series['Nichtmitglied'] = 1
         series['NummerProbeabo'] = '3/16'
-		series['Nichtmigliedskategorien'] = 7
+        series['Nichtmigliedskategorien'] = 7
         df = df.append(series)
         snr = snr + 1 
    
@@ -244,7 +247,7 @@ def run_db_conversion(file, mtgNo):
         df.to_csv(outputfile,
                   sep=";",
                   index=False,
-                  encoding='windows-1252',
+                  encoding='iso-8859-15',
                   columns=['SNR', 'Mitglied', 'Mitgliedskategorien', 'VN',
                            'NAME', 'Anrede', 'STRASSE', 'PLZ', 'ORT',
                            'vorwahltelmobil', 'mobil', 'EMAIL', 'GEBDATUM',
@@ -253,7 +256,7 @@ def run_db_conversion(file, mtgNo):
                            'kind3_dat', 'kind4', 'kind4_dat', 'kind5',
                            'kind5_dat', 'moremembers', 'summe',
                            'einzbeitrag2015', 'EinzNotizen', 'Beitritt',
-                           'Herkunft', 'Notizen', 'keinDE', 'ANSZU'])
+                           'Herkunft', 'Notizen', 'keinDE', 'ANSZU','bezahlstatus'])
     except IOError:
         print('ERROR: Could not write to output file')
     messagebox.showinfo('Radlobby-zu-Kartei', 'Konvertierung beendet!\n'+
