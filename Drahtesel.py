@@ -15,43 +15,41 @@ from tkinter import Tk, ttk, messagebox, StringVar
 from tkinter import filedialog as fdial
 import csv
 
-locale.setlocale(locale.LC_TIME, "deu_deu")
+#locale.setlocale(locale.LC_TIME, "deu_deu")
 
 root = Tk()
-input_file = StringVar()
 timestamp = datetime.strftime(datetime.now(),'%Y_%m_%d')
-SNR = StringVar()
 df = pd.DataFrame()
 de_input_file = StringVar()
 de_SNR = StringVar()
 de_outputfile = 'de_import_' + timestamp + '.mer'
-
-
+de_abotype = ''
+header = ''
 def de_filepath(file):
-    file.set(fdial.askdirectory(initialdir=r'%HOMEPATH%\Downloads'))
+    file.set(fdial.askopenfilename(initialdir=r'%HOMEPATH%/Downloads'))
     if isinstance(file.get(), str):
         de_b_run.state(['!disabled'])
 
         
-def drahtesel_reformat(folder, snr):
-    fieldnames = ['Geburtsdatum','Anmerkungen','#','Vorname','Titel','Adresse','Wie sind Sie auf den Drahtesel aufmerksam geworden?','Abo','Telefon','Geschlecht','Ort','Willkommenspaket','Addresse','Email','Veranstaltung','Postleitzahl','Zahlung','Telefonnummer','Nachname','E-Mail','Date Submitted','sonstiges']
-#    snr = int(snr)
-#    header_mitglied = ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Abo', 'Notizen']
-#    header_geschenk = ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Titel_2', 'VN_2', 'NAME_2', 'STRASSE_2', 'PLZ_2', 'ORT_2', 'email_2', 'Abo', 'Zahlung', 'Willkommenspaket', 'Anmerkungen']
-#    header_probe =    ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Anrede','Gebdatum','Herkunft','Notizen','Sonstiges']
-    with open('out.csv','a') as f_out:
-        writer = csv.DictWriter(f_out, fieldnames=fieldnames)
+def drahtesel_reformat(file, snr):
+    #fieldnames = ['Geburtsdatum','Anmerkungen','#','Vorname','Titel','Adresse','Wie sind Sie auf den Drahtesel aufmerksam geworden?','Abo','Telefon','Geschlecht','Ort','Willkommenspaket','Addresse','Email','Veranstaltung','Postleitzahl','Zahlung','Telefonnummer','Nachname','E-Mail','Date Submitted','sonstiges']
+    header_mitglied = ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Abo', 'Notizen']
+    header_geschenk = ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Titel_2', 'VN_2', 'NAME_2', 'STRASSE_2', 'PLZ_2', 'ORT_2', 'email_2', 'Abo', 'Zahlung', 'Willkommenspaket', 'Anmerkungen']
+    header_probe =    ['SNR', 'Date Submitted', 'Titel', 'VN', 'NAME', 'STRASSE', 'PLZ', 'ORT', 'mobil', 'email', 'Anrede','Gebdatum','Herkunft','Notizen','Sonstiges']
+    with open(file,'r') as f_out:
+        header = f_out.readline()
+        if len(header.split(',')) == 21:
+            header = header_geschenk
+        elif len(header.split(',')) == 15:
+            header = header_probe
+        elif len(header.split(',')) == 12:
+            header = header_mitglied
+        
+        snr = int(snr)
+  
+
+
         csvreader.fieldnames = fieldnames
-        for filename in glob.glob('ninja-forms-submission*'):
-            inputfile = open(filename,'r',newline='')
-            csvreader = csv.DictReader(inputfile)
-#            header = csvreader.fieldnames
-#            if len(header) == 21:
-#                header = header_geschenk
-#            elif len(header) == 15:
-#                header = header_probe
-#            elif len(header) == 12:
-#                header = header_mitglied
         for line in csvreader:            
             writer.writerow(line)
                
@@ -84,39 +82,39 @@ def drahtesel_reformat(folder, snr):
 
 
 root.title("Reformatierung für Kartei Import")
-root.geometry('300x400')
+root.geometry('300x100')
 f = ttk.Frame(root, padding=(5, 10), width=300, height=100)
 f['borderwidth'] = 5
 f['relief'] = 'raised'
 
-e_in = ttk.Entry(f, textvariable=input_file, width=40)
-e_snr = ttk.Entry(f, textvariable=SNR, width=10)
-b_in = ttk.Button(f, text="Radlobby CSV wählen",
-                  command=lambda: filepath(input_file))
-b_run = ttk.Button(f, text="Start Script",
-               command=lambda: run_db_conversion(input_file.get(), SNR.get()))
-l_snr = ttk.Label(f, text='erste SNR')
+#e_in = ttk.Entry(f, textvariable=input_file, width=40)
+#e_snr = ttk.Entry(f, textvariable=SNR, width=10)
+#b_in = ttk.Button(f, text="Radlobby CSV wählen",
+#                  command=lambda: filepath(input_file))
+#b_run = ttk.Button(f, text="Start Script",
+#               command=lambda: run_db_conversion(input_file.get(), SNR.get()))
+#l_snr = ttk.Label(f, text='erste SNR')
 # root.columnconfigure and .rowconfigure are important for resizing !
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
-f.grid(column=0, row=0, sticky=("N, W, E, S"))
-f.columnconfigure(0, weight=1)
-f.columnconfigure(1, weight=1)
-f.rowconfigure(3, weight=1)
-f.rowconfigure(0, weight=1)
-### Radlobby grid layout 
-b_in.grid_configure(column=0, row=0, sticky="N")
-e_in.grid_configure(column=0, row=1, sticky="N")
-l_snr.grid(column=0, row=2)
-e_snr.grid(column=0, row=3)
-
-b_run.grid(column=0, row=5, sticky="EW")
-b_run.state(['disabled'])
+#f.grid(column=0, row=0, sticky=("N, W, E, S"))
+#f.columnconfigure(0, weight=1)
+#f.columnconfigure(1, weight=1)
+#f.rowconfigure(3, weight=1)
+#f.rowconfigure(0, weight=1)
+#### Radlobby grid layout 
+#b_in.grid_configure(column=0, row=0, sticky="N")
+#e_in.grid_configure(column=0, row=1, sticky="N")
+#l_snr.grid(column=0, row=2)
+#e_snr.grid(column=0, row=3)
+#
+#b_run.grid(column=0, row=5, sticky="EW")
+#b_run.state(['disabled'])
 
 ### Drahtesel part of window
 
 de_f = ttk.Frame(root,padding=(5, 10),width=300, height=100).grid()
-de_b_in = ttk.Button(de_f, text = "Drahtesel Ordner auswählen",
+de_b_in = ttk.Button(de_f, text = "Drahtesel Abonnement Datei auswählen",
                      command=lambda: de_filepath(de_input_file))
 de_e_in = ttk.Entry(de_f, textvariable=de_input_file, width=40)
 de_l_snr = ttk.Label(de_f, text='erste SNR')
